@@ -23829,6 +23829,7 @@ Number of validation examples = 47051
 <div class="text_cell_render border-box-sizing rendered_html">
 <p><strong>Answer:</strong></p>
 <p>I have tried training both on color images as well as grayscale images. While this does not make much difference in terms of training accuracy, converting images to grayscale results in a slightly better training accuracy.</p>
+<p>When the data is initially loaded from the file it is sorted by image type which groups all images belonging to a sign type together. Training on such a data set may lead to the learning algorithm converging to a local minimum and consequently to a model that is not able generalize well. I used the shuffle function from the sklearn library to randomize the training data prior to training.</p>
 
 </div>
 </div>
@@ -23873,9 +23874,10 @@ Number of validation examples = 47051
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p><strong>Answer:</strong></p>
-<p>I used train_test_split() function from sklearn library to split off 20% of the training data set (which included the synthetically generated data).</p>
+<p>I used train_test_split() function from sklearn library to split off 20% of the training data set to use a validation data set. I used the same split (20% for validation, 80% for training) for both the original and synthetically generated data. The downloaded data set contained a test data set (test.p) which I used only once after I finished training the model (see the last cell in this notebook).</p>
+<p><strong>Optional:</strong>
+At first I trained the model using only the supplied data but found that while it did achieve fairly good training accuracy it did not do well on the images I downloaded off the internet. I  decided that the likely cause was overfitting which caused the model not to generalize well to examples it hasn't see during training. One way to deal with overfitting is to train on more data. Indeed, after training on the larger data set the the model performed much better. Another option would have been to add regularization, I did not explore that option since adding more data seemed to work well enough.</p>
 <p>I generated additional data by  randomly "jittering" images from the original data set as described in the paper linked above. I randomly perturbed the source image by translating it by [-2,2] pixels, scaling by [.9,1.1] and rotating [-15,+15] degrees 5 times each. The new data set was then merged with the original data set and shuffled.</p>
-<p>At first I trained the model using only the supplied data but found that while it did achieve fairly good training accuracy it did not do well on the images I downloaded off the internet. I  decided that the likely cause was overfitting since the images looked reasonably close to what was in the original set. One way to deal with overfitting is to train on more data. Indeed, after training on the larger data set the the model performed much better. Another option would have been to add regularization, I did not explore that option since adding more data seemed to work well enough.</p>
 
 </div>
 </div>
@@ -24002,9 +24004,14 @@ Number of validation examples = 47051
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p><strong>Answer:</strong></p>
-<p>I eventually settled on a modified version of the LeNet architecture. First, it was modified to accept grayscale images with depth of 1 and its output was expanded to classy 43 types of inputs instead of the original 10. This version of the network worked remarkably well, achieving around 95% accuracy on the original data set.</p>
-<p>Later I added a branched connection of the convolutional layer 1 after pooling to the fully connected output layer (layer 5) as described in the paper linked above. This further improved training accuracy to 96-97%</p>
-<p>The resulting architecture looks as follows:</p>
+<p>I eventually settled on a modified version of the LeNet architecture. First, it was adapted to accept grayscale images with depth of 1 and its output was expanded to classy 43 types of inputs instead of the original 10. This version of the network worked remarkably well, achieving around 95% accuracy on the original data set.</p>
+<p>Later I added a branched connection of the first convolutional layer after pooling to the fully connected output layer (layer 5) as described in the paper linked above. Modifying the network in this way adds lower level visual primitives learned by the first layer of the network as an input to the fully connected classification layers at the end providing it with a richer and more diverse set of features upon which to make its class membership prediction. This further improved training accuracy to 96-97%.</p>
+<p>The resulting network belongs to the class of convolutional neural networks whose architecture is inspired by the structure of the animal visual cortex. A receptive field in the animal model is represented by a convolution operation which is used learn low level visual features such as edges in a way that is insensitives to shifting of the features within the visual field. Furthermore the convolutional layer uses a smaller number of weights than a fully connected layer thus making learning more computationally efficient.</p>
+<p>The convolutional layer is followed by a RELU (rectifier linear unit) which is a type of activation function used to introduce nonlinearity into the network and thus enabling feature classifications with respect to non-linear decision boundaries in the input space. RELU's are biologically inspired and computationally efficient blocks that are known to work particularly well in the context of deep neural networks.</p>
+<p>Following the activation function is a pooling operation which is used to combine several outputs of the pervious layer together. Pooling serves to reduce the number of network weights in order to both improve the network's generalization abilities (ie to prevent overfitting) as well as computational efficiency. The network then repeats the first stage described above with another set of convolutional layer, followed by the RELU activations, and pooling with progressively smaller input and output dimensions.</p>
+<p>Next, the outputs of the convolutional layers are fed into a sequence of three fully connected layers, the outputs of the first two layers are followed by a RELU activation. The purpose of this stage of the network is classify the visual features extracted by the convolutional layers into a set of image classes. In order to interpret the prediction of the network (the output of the last fully connected layer) as a probability score for each image class, the output is passed through a softmax function which is a way of normalizing the output such that the sum of all predictions adds up to one.</p>
+<p>Finally, the cost function needed for the optimization algorithm is formed as a cross entropy of the network's softmax output described above and a one-hot encoded representation of the labels.</p>
+<p>The resulting architecture has the following structure and dimensions:</p>
 <ul>
 <li>Layer 1: Convolutional. Input = 32x32x1. Output = 28x28x6.</li>
 <li>RELU Activation.</li>
@@ -24559,7 +24566,8 @@ AElFTkSuQmCC
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p><strong>Answer:</strong></p>
-<p>I started with the slightly modified version of lenet which ended up working remarkly well. From there it was a matter of exploring the hyperparameter space as described above as well as expanding the original lenet architecture based on the traffic sign implementation described in the Sermanet and LeCun's paper linked above</p>
+<p>I started with the slightly modified version of the LeNet architecture which ended up working remarkably well. From there it was a matter of exploring the hyperparameter space as described above as well as expanding the original LeNet architecture based on the traffic sign classification implementation described in the Sermanet and LeCun's paper linked above.</p>
+<p>Generally, I adjusted each parameter separately then ran the network to check it's training validation accuracy in order to maximize it. Once I reached the level of training accuracy that I could not improve further I checked model's performance on a set of images I downloaded from the web. The model performed rather poorly at first which I interpreted to mean that it was overfitting the training set since the web images looked reasonably close to the training set. To improve model's ability to generalize I generated additional data as described above which improved it's performance on the web image set without sacrificing validation set accuracy albeit at the expense of additional training time due to crunching though more data in each epoch of training.</p>
 
 </div>
 </div>
@@ -28604,7 +28612,25 @@ a = np.array([[ 0.24879643,  0.07032244,  0.12641572,  0.34763842,  0.07893497,
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p><strong>Answer:</strong></p>
-<p>The model appears to be pretty certain with most of the signs (including the one it gets wrong). It is interesting that it is less certain (although correct) about the "speed limit 50" sign and assigns significant probabilities to other similar looking signs such as "speed limit 80" and "speed limit 30" which seems very reasonable since the signs do share a large degree of similarity.</p>
+<p>Here is a table of the 3 top model predictions based on softmax output probabilities for each sign:</p>
+
+<pre><code>Target               | 1st choice           | 2nd choice           | 3rd choice          
+--------------------------------------------------------------------------------------------------
+No entry             | No entry             | Speed limit (20km/h) | Speed limit (30km/h)
+Speed limit (50km/h) | Speed limit (50km/h) | Speed limit (80km/h) | Speed limit (30km/h)
+Stop                 | Stop                 | Turn right ahead     | No entry            
+Turn left ahead      | End of no passing... | Keep right           | No passing for vehicles over 3.5 metric tons
+Yield                | Yield                | Speed limit (20km/h) | Speed limit (30km/h)</code></pre>
+<p>and here is a table of top choice softmax probabilities for each sign:</p>
+
+<pre><code>Target               | 1st choice prob %   
+------------------------------------------------------------------
+No entry             |                  1.0
+Speed limit (50km/h) |                 0.73
+Stop                 |                  1.0
+Turn left ahead      |                  1.0
+Yield                |                  1.0</code></pre>
+<p>As you can see, the model appears to be pretty certain with most of the signs (including the one it gets wrong: #4 Turn left ahead). It is interesting that it is less certain (although correct) about the "speed limit 50" sign and assigns significant probabilities to other similar looking signs such as "speed limit 80" and "speed limit 30" which seems very reasonable since the signs do share a large degree of similarity.</p>
 
 </div>
 </div>
